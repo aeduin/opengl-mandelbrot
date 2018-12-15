@@ -48,6 +48,7 @@ fn main() {
     
     let program = glium::Program::from_source(&display, include_str!("triangle.vert"), include_str!("triangle.frag"), None).unwrap();
 
+    //initialize variables for main loop
     let mut scale: f64 = 2.0;
     let mut center: [f64; 2] = [0.0, 0.0];
     let mut mouse_position: (f64, f64) = (0.0, 0.0);
@@ -62,13 +63,15 @@ fn main() {
     let mut last_zoom_update = std::time::SystemTime::now();
     let mut draw_start = std::time::SystemTime::now();
 
+    //start main loop
     while open {
         if zooming {
-            let elapsed = last_spacebar_update.elapsed().unwrap();
-            let elapsed_milli_seconds = elapsed.as_secs() * 1000 + elapsed.subsec_millis() as u64;
+            let elapsed = last_zoom_update.elapsed().unwrap();
+            let mut elapsed_milli_seconds = elapsed.as_secs() * 1000 + elapsed.subsec_millis() as u64;
 
-            for _ in [1..elapsed_milli_seconds].iter() {
-                scale *= 0.995;
+            while elapsed_milli_seconds > 0 {
+                elapsed_milli_seconds -= 1;
+                scale *= 0.9998;
             }
             need_draw_update = true;
             last_zoom_update = std::time::SystemTime::now();
@@ -109,64 +112,66 @@ fn main() {
             need_draw_update = false;
         }
         
-
-        events_loop.poll_events(|ev| {
-            match ev {
-                Event::WindowEvent {event, ..} => match event {
-                    WindowEvent::CloseRequested => open = false,
-                    WindowEvent::CursorMoved{position, ..} => {
-                        mouse_position = (position.x as f64, position.y as f64);
-                    },
-                    WindowEvent::MouseInput{state, button, ..} => {
-                        if state == ElementState::Pressed && button == MouseButton::Left {
-                            println!("centering!");
-                            center = pixel_to_mandel_coords((center[0], center[1]), window_size, mouse_position, scale);
-                            need_draw_update = true;
-                        }
-                    },
-                    WindowEvent::Resized(size) => {
-                        window_size = (size.width as f64, size.height as f64);
-                        need_draw_update = true;
-                    },
-                    _ => (),
-                },
-                glutin::Event::DeviceEvent {event, ..} => match event {
-                    glutin::DeviceEvent::MouseWheel {delta} => match delta {
-                        glutin::MouseScrollDelta::LineDelta(_x, y) => {
-                            scale *= 1.0 - (y as f64) / 10.0;
+        //poll events
+        {
+            events_loop.poll_events(|ev| {
+                match ev {
+                    Event::WindowEvent {event, ..} => match event {
+                        WindowEvent::CloseRequested => open = false,
+                        WindowEvent::CursorMoved{position, ..} => {
+                            mouse_position = (position.x as f64, position.y as f64);
+                        },
+                        WindowEvent::MouseInput{state, button, ..} => {
+                            if state == ElementState::Pressed && button == MouseButton::Left {
+                                println!("centering!");
+                                center = pixel_to_mandel_coords((center[0], center[1]), window_size, mouse_position, scale);
+                                need_draw_update = true;
+                            }
+                        },
+                        WindowEvent::Resized(size) => {
+                            window_size = (size.width as f64, size.height as f64);
                             need_draw_update = true;
                         },
                         _ => (),
                     },
-                    glutin::DeviceEvent::Key(key) => {
-                        match key.virtual_keycode {
-                            Some(key_code) => {
-                                match key_code {
-                                    glutin::VirtualKeyCode::Space => {
-                                        let elapsed_time = last_spacebar_update.elapsed().unwrap();
-                                        if elapsed_time.subsec_millis() > 300 || elapsed_time.as_secs() > 0 {
-                                            println!("spacebar pressed");
-
-                                            zooming = !zooming;
-
-                                            if zooming {
-                                                last_zoom_update = std::time::SystemTime::now();
-                                            }
-
-                                            last_spacebar_update = std::time::SystemTime::now();
-                                        }
-                                    }
-                                    _ => ()
-                                }
+                    glutin::Event::DeviceEvent {event, ..} => match event {
+                        glutin::DeviceEvent::MouseWheel {delta} => match delta {
+                            glutin::MouseScrollDelta::LineDelta(_x, y) => {
+                                scale *= 1.0 - (y as f64) / 10.0;
+                                need_draw_update = true;
                             },
-                            None => println!("no virtual keycode for pressed key"),
+                            _ => (),
+                        },
+                        glutin::DeviceEvent::Key(key) => {
+                            match key.virtual_keycode {
+                                Some(key_code) => {
+                                    match key_code {
+                                        glutin::VirtualKeyCode::Space => {
+                                            let elapsed_time = last_spacebar_update.elapsed().unwrap();
+                                            if elapsed_time.subsec_millis() > 300 || elapsed_time.as_secs() > 0 {
+                                                println!("spacebar pressed");
+
+                                                zooming = !zooming;
+
+                                                if zooming {
+                                                    last_zoom_update = std::time::SystemTime::now();
+                                                }
+
+                                                last_spacebar_update = std::time::SystemTime::now();
+                                            }
+                                        }
+                                        _ => ()
+                                    }
+                                },
+                                None => println!("no virtual keycode for pressed key"),
+                            }
                         }
-                    }
+                        _ => (),
+                    },
                     _ => (),
-                },
-                _ => (),
-            }
-        })
+                }
+            })
+        }
     }
 }
 
