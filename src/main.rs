@@ -13,7 +13,7 @@ fn main() {
     let window = glutin::WindowBuilder::new().with_min_dimensions(glutin::dpi::LogicalSize{
         width: 500.0,
         height: 400.0,
-    }).with_title("Open Adventure");
+    }).with_title("OpenGL Mandelbrot");
     let context = glutin::ContextBuilder::new().with_vsync(true);
     let display = glium::Display::new(window, context, &events_loop).unwrap();
     
@@ -54,14 +54,14 @@ fn main() {
     let mut mouse_position: (f64, f64) = (0.0, 0.0);
     let mut window_size: (f64, f64) = (500.0, 400.0);
     let mut need_draw_update = true;
-    let max_mandel_number: f32 = 1000.0;
+    let max_mandel_number: f32 = 8000.0;
     let mut zooming = false;
 
     let mut open = true;
  
     let mut last_spacebar_update = std::time::SystemTime::now();
     let mut last_zoom_update = std::time::SystemTime::now();
-    let mut draw_start = std::time::SystemTime::now();
+    let mut draw_start;
 
     //start main loop
     while open {
@@ -137,7 +137,8 @@ fn main() {
                     glutin::Event::DeviceEvent {event, ..} => match event {
                         glutin::DeviceEvent::MouseWheel {delta} => match delta {
                             glutin::MouseScrollDelta::LineDelta(_x, y) => {
-                                scale *= 1.0 - (y as f64) / 10.0;
+                                //println!("scrollY value: {}", y);
+                                scale *= 1.0 - (y as f64) / 50.0;
                                 need_draw_update = true;
                             },
                             _ => (),
@@ -172,13 +173,14 @@ fn main() {
                 }
             })
         }
+        std::thread::sleep(std::time::Duration::from_micros(1));
     }
 }
 
 
 fn pixel_to_mandel_coords((center_x, center_y): (f64, f64), (screen_size_width, screen_size_height): (f64, f64), (pixel_x, pixel_y): (f64, f64), scale: f64) -> [f64; 2] {
-    let x_scale: f64 = if(screen_size_width < screen_size_height) {screen_size_height / screen_size_width} else {1.0};
-    let y_scale: f64 = if(screen_size_width > screen_size_height) {screen_size_width / screen_size_height} else {1.0};
+    let x_scale: f64 = if screen_size_width < screen_size_height {screen_size_height / screen_size_width} else {1.0};
+    let y_scale: f64 = if screen_size_width > screen_size_height {screen_size_width / screen_size_height} else {1.0};
 
     [
         center_x + (pixel_x / screen_size_width * 2.0 - 1.0) * scale / x_scale,

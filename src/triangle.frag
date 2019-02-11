@@ -7,6 +7,23 @@ in vec2 v_texture_coordinate;
 uniform dvec2 center;
 uniform double scale;
 uniform float max_mandel_number;
+const double max_distance_squared = 4.0;
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+float mapper(float input) {
+    input -= floor(input);
+
+    if(input < .5) {
+        return input * 2.0;
+    }
+    else {
+        return 2.0 - input * 2.0 ;
+    }
+}
 
 void main()
 {
@@ -19,7 +36,7 @@ void main()
     double mandelX = v_texture_coordinate.x * scale + center.x;
     double mandelY = v_texture_coordinate.y * scale + center.y;
 
-    while(a * a + b * b < 4.0) {
+    while(a * a + b * b < max_distance_squared){
         if(++counter >= max_mandel_number) {
             Color = vec4(0.0, 0.0, 0.0, 1.0);
             return;
@@ -29,15 +46,8 @@ void main()
         b = 2.0 * a * b + mandelY;
         a = tempA;
     }
-/*
-    float red = min(counter / max_mandel_number, 1.0f);
-    float blue = min(counter / max_mandel_number * 2.0f, 1.0f);
-    float green = min(counter / max_mandel_number * 1.5f, 1.0f);
-*/
 
-    float red = 1.0 - 1000.0 / (counter + 1000.0);
-    float green = 1.0 - 600.0 / (counter + 600.0);
-    float blue = 1.0 - 300.0 / (counter + 300.0);
+    float fraction = log(counter / 4000.0 * 32.0) / 8.0;
 
-    Color = vec4(red, green, blue, 1.0);
+    Color = vec4(mapper(fraction * 3.0), mapper(fraction * 4.0), mapper(fraction * 5.0), 1.0);
 }
