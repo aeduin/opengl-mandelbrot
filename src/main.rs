@@ -6,6 +6,10 @@ mod math;
 use glium::{glutin, Surface};
 use glutin::*;
 use math::Vertex;
+use std::io;
+use std::io::prelude::*;
+use std::sync::mpsc::channel;
+use std::thread;
 
 fn main() {
     //open window and initialise
@@ -16,6 +20,18 @@ fn main() {
     }).with_title("OpenGL Mandelbrot");
     let context = glutin::ContextBuilder::new().with_vsync(true);
     let display = glium::Display::new(window, context, &events_loop).unwrap();
+
+
+    let (stdin_sender, stdin_receiver) = channel();
+
+    thread::spawn(move || {
+        let mut reader = io::stdin();
+
+        for line in reader.lock().lines() {
+            stdin_sender.send(line.unwrap()).unwrap();
+        }
+    });
+    
     
     //initialize vertex buffers
     let (index_buffer, vertex_buffer) = {
@@ -112,6 +128,19 @@ fn main() {
             need_draw_update = false;
         }
         
+        // Read stdin
+        match stdin_receiver.try_recv() {
+            Err(_error) => (),
+            Ok(input) => {
+                println!("{}", input);
+            }
+        }
+
+        // for line in reader.lock(). //.lines() {
+        //     println!("{}", line.unwrap());
+        //     break;
+        // }
+
         //poll events
         {
             events_loop.poll_events(|ev| {

@@ -8,6 +8,7 @@ uniform dvec2 center;
 uniform double scale;
 uniform float max_mandel_number;
 const double max_distance_squared = 4.0;
+
 vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
@@ -27,8 +28,6 @@ float mapper(float input) {
 
 void main()
 {
-    //Color = vec4(texture(v_texture, v_texture_coordinate).rgb, 1.0);
-
     double a = 0.0;
     double b = 0.0;
     float counter = 0;
@@ -47,7 +46,11 @@ void main()
         a = tempA;
     }
 
-    float fraction = log(counter / 4000.0 * 32.0) / 8.0;
+    float fraction = log(counter / 4000.0 * 32.0) / 24.0;
 
-    Color = vec4(mapper(fraction * 3.0), mapper(fraction * 4.0), mapper(fraction * 5.0), 1.0);
+    float r = mapper(fraction * 7.0);
+    float g = mapper(fraction * 11.0);
+    float blue = mapper(fraction * 13.0);
+
+    Color = vec4(r * sqrt(g) * sqrt(blue), g * g, blue, 1.0);
 }
