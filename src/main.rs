@@ -27,8 +27,10 @@ fn main() {
     thread::spawn(move || {
         let reader = io::stdin();
 
-        for line in reader.lock().lines() {
-            stdin_sender.send(line.unwrap()).unwrap();
+        loop {
+            for line in reader.lock().lines() {
+                stdin_sender.send(line.unwrap()).unwrap();
+            }
         }
     });
     
@@ -79,6 +81,8 @@ fn main() {
     let mut last_zoom_update = std::time::SystemTime::now();
     let mut draw_start;
 
+    let mut zoom_scale = 0.9998;
+
     //start main loop
     while open {
         if zooming {
@@ -87,7 +91,7 @@ fn main() {
 
             while elapsed_milli_seconds > 0 {
                 elapsed_milli_seconds -= 1;
-                scale *= 0.9998;
+                scale *= zoom_scale;
             }
             need_draw_update = true;
             last_zoom_update = std::time::SystemTime::now();
@@ -160,6 +164,12 @@ fn main() {
                                     Ok(parsed_value) => action.apply(&mut max_mandel_number, parsed_value),
                                 }
                             }
+                            else if variable_name == "z" {
+                                match value.parse::<f64>() {
+                                    Err(_error) => println!("invalid number format: {}", value),
+                                    Ok(parsed_value) => action.apply(&mut zoom_scale, parsed_value),
+                                }
+                            }
                             else {
                                 println!("unknown variable name: {}", variable_name);
                             }
@@ -189,11 +199,25 @@ fn main() {
                                     Ok(parsed_value) => max_mandel_number = parsed_value,
                                 }
                             }
+                            else if variable_name == "z" {
+                                match value.parse::<f64>() {
+                                    Err(_error) => println!("invalid number format: {}", value),
+                                    Ok(parsed_value) => zoom_scale = parsed_value,
+                                }
+                            }
                             else {
                                 println!("unknown variable name: {}", variable_name);
                             }
                         },
-                        Command::ToggleZoom => zooming = !zooming,
+                        Command::ToggleZoom => {
+                            if zooming {
+                                zooming = false;
+                            }
+                            else {
+                                zooming = true;
+                                last_zoom_update = std::time::SystemTime::now();
+                            }
+                        }
                         Command::Export => 
                             println!("x={},y={},s={},i={}", center[0], center[1], scale, max_mandel_number),
                         
