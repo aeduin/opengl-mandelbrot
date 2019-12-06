@@ -25,7 +25,7 @@ fn main() {
     let (stdin_sender, stdin_receiver) = channel();
 
     thread::spawn(move || {
-        let mut reader = io::stdin();
+        let reader = io::stdin();
 
         for line in reader.lock().lines() {
             stdin_sender.send(line.unwrap()).unwrap();
@@ -70,7 +70,7 @@ fn main() {
     let mut mouse_position: (f64, f64) = (0.0, 0.0);
     let mut window_size: (f64, f64) = (500.0, 400.0);
     let mut need_draw_update = true;
-    let max_mandel_number: f32 = 8000.0;
+    let mut max_mandel_number: f32 = 2000.0;
     let mut zooming = false;
 
     let mut open = true;
@@ -123,7 +123,7 @@ fn main() {
 
             //print draw time
             let elapsed = draw_start.elapsed().unwrap();
-            println!("drawing took {}ms", elapsed.as_secs() * 1000 + elapsed.subsec_millis() as u64);
+            // println!("drawing took {}ms", elapsed.as_secs() * 1000 + elapsed.subsec_millis() as u64);
 
             need_draw_update = false;
         }
@@ -132,14 +132,110 @@ fn main() {
         match stdin_receiver.try_recv() {
             Err(_error) => (),
             Ok(input) => {
-                println!("{}", input);
+                for command in subdivide_commands(&input) {
+                    match command {
+                        Command::Invalid => println!("error, invalid comand"),
+                        Command::Update{variable_name, value, action} => {
+                            if *variable_name == *"s" {
+                                match value.parse::<f64>() {
+                                    Err(_error) => println!("invalid number format: {}", value),
+                                    Ok(parsed_value) => action.apply(&mut scale, parsed_value),
+                                }
+                            }
+                            else if variable_name == "x" {
+                                match value.parse::<f64>() {
+                                    Err(_error) => println!("invalid number format: {}", value),
+                                    Ok(parsed_value) => action.apply(&mut center[0], parsed_value),
+                                }
+                            }
+                            else if variable_name == "y" {
+                                match value.parse::<f64>() {
+                                    Err(_error) => println!("invalid number format: {}", value),
+                                    Ok(parsed_value) => action.apply(&mut center[1], parsed_value),
+                                }
+                            }
+                            else if variable_name == "i" {
+                                match value.parse::<f32>() {
+                                    Err(_error) => println!("invalid number format: {}", value),
+                                    Ok(parsed_value) => action.apply(&mut max_mandel_number, parsed_value),
+                                }
+                            }
+                            else {
+                                println!("unknown variable name: {}", variable_name);
+                            }
+                        },
+                        Command::Set{variable_name, value} => {
+                            if variable_name == "s" {
+                                match value.parse::<f64>() {
+                                    Err(_error) => println!("invalid number format: {}", value),
+                                    Ok(parsed_value) => scale = parsed_value,
+                                }
+                            }
+                            else if variable_name == "x" {
+                                match value.parse::<f64>() {
+                                    Err(_error) => println!("invalid number format: {}", value),
+                                    Ok(parsed_value) => center[0] = parsed_value,
+                                }
+                            }
+                            else if variable_name == "y" {
+                                match value.parse::<f64>() {
+                                    Err(_error) => println!("invalid number format: {}", value),
+                                    Ok(parsed_value) => center[1] = parsed_value,
+                                }
+                            }
+                            else if variable_name == "i" {
+                                match value.parse::<f32>() {
+                                    Err(_error) => println!("invalid number format: {}", value),
+                                    Ok(parsed_value) => max_mandel_number = parsed_value,
+                                }
+                            }
+                            else {
+                                println!("unknown variable name: {}", variable_name);
+                            }
+                        },
+                        Command::ToggleZoom => zooming = !zooming,
+                        Command::Export => 
+                            println!("x={},y={},s={},i={}", center[0], center[1], scale, max_mandel_number),
+                        
+                    }
+                }
+
+                // if input.len() > 2 {
+                //     // let input = &input[..];
+    
+                //     if input[0..2] == *"i=" {
+                //         let head = &input[..2];
+                //         let tail = &input[2..];
+                //         match tail.parse::<f32>() {
+                //             Err(_error) => println!("invalid number: {}", input),
+                //             Ok(new_max) => {
+                //                 need_draw_update = true;
+                //                 max_mandel_number = new_max;
+                //             },
+                //         };
+                //     }
+                //     else if input[0..3] == *"s*=" {
+                //         let head = &input[..3];
+                //         let tail = &input[3..];
+                //         match tail.parse::<f64>() {
+                //             Err(_error) => println!("invalid number: {}", input),
+                //             Ok(multiplier) => {
+                //                 need_draw_update = true;
+                //                 scale *= multiplier;
+                //             },
+                //         };
+                //     }
+                //     else {
+                //         println!("invalid input: {}", input);
+                //     }
+                // }
+                // else {
+                //     println!("input to short: {}", input);
+                // }
+
+                need_draw_update = true;
             }
         }
-
-        // for line in reader.lock(). //.lines() {
-        //     println!("{}", line.unwrap());
-        //     break;
-        // }
 
         //poll events
         {
@@ -152,7 +248,7 @@ fn main() {
                         },
                         WindowEvent::MouseInput{state, button, ..} => {
                             if state == ElementState::Pressed && button == MouseButton::Left {
-                                println!("centering!");
+                                // println!("centering!");
                                 center = pixel_to_mandel_coords((center[0], center[1]), window_size, mouse_position, scale);
                                 need_draw_update = true;
                             }
@@ -177,23 +273,25 @@ fn main() {
                                 Some(key_code) => {
                                     match key_code {
                                         glutin::VirtualKeyCode::Space => {
-                                            let elapsed_time = last_spacebar_update.elapsed().unwrap();
-                                            if elapsed_time.subsec_millis() > 300 || elapsed_time.as_secs() > 0 {
-                                                println!("spacebar pressed");
-
-                                                zooming = !zooming;
-
-                                                if zooming {
-                                                    last_zoom_update = std::time::SystemTime::now();
+                                            if false {
+                                                let elapsed_time = last_spacebar_update.elapsed().unwrap();
+                                                if elapsed_time.subsec_millis() > 300 || elapsed_time.as_secs() > 0 {
+                                                    println!("spacebar pressed");
+    
+                                                    zooming = !zooming;
+    
+                                                    if zooming {
+                                                        last_zoom_update = std::time::SystemTime::now();
+                                                    }
+    
+                                                    last_spacebar_update = std::time::SystemTime::now();
                                                 }
-
-                                                last_spacebar_update = std::time::SystemTime::now();
                                             }
                                         }
                                         _ => ()
                                     }
                                 },
-                                None => println!("no virtual keycode for pressed key"),
+                                None => (), //println!("no virtual keycode for pressed key"),
                             }
                         }
                         _ => (),
@@ -206,6 +304,112 @@ fn main() {
     }
 }
 
+enum Action {
+    Multiply,
+    Divide,
+    Add,
+    Subtract,
+}
+
+trait Apply<T> {
+    fn apply(&self, target: &mut T, value: T) ;
+}
+
+impl<T> Apply<T> for Action where T: std::ops::Add<T, Output=T> + std::ops::Div<T, Output=T> + std::ops::Sub<T, Output=T> + std::ops::Mul<T, Output=T> + Copy{
+    fn apply(&self, target: &mut T, value: T) {
+        match self {
+            Action::Multiply => *target = *target * value,
+            Action::Divide => *target = *target / value,
+            Action::Add => *target = *target + value,
+            Action::Subtract => *target = *target - value,
+        }
+    }
+}
+
+enum Command {
+    Update{variable_name: String, value: String, action: Action},
+    Set{variable_name: String, value: String},
+    Export,
+    ToggleZoom,
+    Invalid,
+}
+
+impl<'a> From<&'a String> for Command {
+    fn from(input: &'a String) -> Command {
+        for i in 0..input.len() {
+            if input[i..i+1] == *"=" {
+                // type is Command::Update or Command::Set
+                let action =
+                    if input[i-1..i] == *"*" {
+                        Action::Multiply
+                    }
+                    else if input[i-1..i] == *"/" {
+                        Action::Divide
+                    }
+                    else if input[i-1..i] == *"+" {
+                        Action::Add
+                    }
+                    else if input[i-1..i] == *"-" {
+                        Action::Subtract
+                    }
+                    else {
+                        return Command::Set{variable_name: String::from(&input[0..i]), value: String::from(&input[i+1..])};
+                    };
+    
+                return Command::Update{variable_name: String::from(&input[0..i-1]), value: String::from(&input[i+1..]), action};
+            }
+        }
+        // no '='-sign found
+        if input == "export" {
+            Command::Export
+        }
+        else if input == "zoom" {
+            Command::ToggleZoom
+        }
+        else{
+            Command::Invalid
+        }
+    }
+}
+
+fn subdivide_commands<'a>(comma_seperated: &'a String) -> Vec<Command> {
+    let mut substrings = Vec::<Command>::new();
+
+    let mut begin = 0;
+
+    for i in 0..comma_seperated.len() {
+        if comma_seperated[i..i+1] == *"," {
+            let string = filter_spaces(&comma_seperated[begin..i]);
+
+            substrings.push(
+                Command::from(&string)
+            );
+
+            begin = i + 1;
+        }
+    }
+
+    let i = comma_seperated.len();
+    let string = filter_spaces(&comma_seperated[begin..i]);
+
+    substrings.push(
+        Command::from(&string)
+    );
+
+    substrings
+}
+
+fn filter_spaces<'a>(in_str: &str) -> String {
+    let mut result = String::new();
+
+    for c in in_str.chars() {
+        if c != ' ' {
+            result.push(c);
+        }
+    }
+
+    result
+}
 
 fn pixel_to_mandel_coords((center_x, center_y): (f64, f64), (screen_size_width, screen_size_height): (f64, f64), (pixel_x, pixel_y): (f64, f64), scale: f64) -> [f64; 2] {
     let x_scale: f64 = if screen_size_width < screen_size_height {screen_size_height / screen_size_width} else {1.0};
