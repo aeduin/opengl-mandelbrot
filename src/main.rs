@@ -81,7 +81,7 @@ fn main() {
     let mut last_zoom_update = std::time::SystemTime::now();
     let mut draw_start;
 
-    let mut zoom_scale = 0.9998;
+    let mut zoom_scale = 0.0002;
 
     //start main loop
     while open {
@@ -91,7 +91,7 @@ fn main() {
 
             while elapsed_milli_seconds > 0 {
                 elapsed_milli_seconds -= 1;
-                scale *= zoom_scale;
+                scale *= 1.0 - zoom_scale;
             }
             need_draw_update = true;
             last_zoom_update = std::time::SystemTime::now();

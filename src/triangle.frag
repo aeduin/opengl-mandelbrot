@@ -1,4 +1,5 @@
 #version 400 core
+#extension GL_ARB_gpu_shader_int64 : require
 
 out vec4 Color;
 
@@ -26,6 +27,15 @@ float mapper(float input) {
     }
 }
 
+uint64_t mult(uint64_t x, uint64_t y) {
+    uint64_t x1 = x;
+    uint64_t x2 = x >> 32;
+    uint64_t y1 = y;
+    uint64_t y2 = y >> 32;
+
+    return 1;
+}
+
 void main()
 {
     double a = 0.0;
@@ -35,6 +45,17 @@ void main()
     double mandelX = v_texture_coordinate.x * scale + center.x;
     double mandelY = v_texture_coordinate.y * scale + center.y;
 
+    // if(mandelX * mandelX + mandelY * mandelY > max_distance_squared) {
+    //     counter = 1;
+    // }
+    // else {
+    //     double max_64 = double(uint64_t(1)<<63);
+        
+
+    //     uint64_t mx = uint64_t(mandelX * max_64 / 2.0);
+    //     uint64_t my = uint64_t(mandelY * max_64 / 2.0);
+    // }
+
     while(a * a + b * b < max_distance_squared){
         if(++counter >= max_mandel_number) {
             Color = vec4(0.0, 0.0, 0.0, 1.0);
@@ -42,7 +63,7 @@ void main()
         }
         
         double tempA = a * a - b * b + mandelX;
-        b = 2.0 * a * b + mandelY;
+        b = 2.0 * a * b + mandelY; 
         a = tempA;
     }
 
