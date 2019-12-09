@@ -126,7 +126,7 @@ fn main() {
             target.finish().unwrap();
 
             //print draw time
-            let elapsed = draw_start.elapsed().unwrap();
+            // let elapsed = draw_start.elapsed().unwrap();
             // println!("drawing took {}ms", elapsed.as_secs() * 1000 + elapsed.subsec_millis() as u64);
 
             need_draw_update = false;
@@ -136,9 +136,9 @@ fn main() {
         match stdin_receiver.try_recv() {
             Err(_error) => (),
             Ok(input) => {
-                for command in subdivide_commands(&input) {
+                for (command_string, command) in subdivide_commands(&input) {
                     match command {
-                        Command::Invalid => println!("error, invalid comand"),
+                        Command::Invalid => println!("error, invalid comand: \"{}\"", command_string),
                         Command::Update{variable_name, value, action} => {
                             if *variable_name == *"s" {
                                 match value.parse::<f64>() {
@@ -223,39 +223,6 @@ fn main() {
                         
                     }
                 }
-
-                // if input.len() > 2 {
-                //     // let input = &input[..];
-    
-                //     if input[0..2] == *"i=" {
-                //         let head = &input[..2];
-                //         let tail = &input[2..];
-                //         match tail.parse::<f32>() {
-                //             Err(_error) => println!("invalid number: {}", input),
-                //             Ok(new_max) => {
-                //                 need_draw_update = true;
-                //                 max_mandel_number = new_max;
-                //             },
-                //         };
-                //     }
-                //     else if input[0..3] == *"s*=" {
-                //         let head = &input[..3];
-                //         let tail = &input[3..];
-                //         match tail.parse::<f64>() {
-                //             Err(_error) => println!("invalid number: {}", input),
-                //             Ok(multiplier) => {
-                //                 need_draw_update = true;
-                //                 scale *= multiplier;
-                //             },
-                //         };
-                //     }
-                //     else {
-                //         println!("invalid input: {}", input);
-                //     }
-                // }
-                // else {
-                //     println!("input to short: {}", input);
-                // }
 
                 need_draw_update = true;
             }
@@ -396,29 +363,37 @@ impl<'a> From<&'a String> for Command {
     }
 }
 
-fn subdivide_commands<'a>(comma_seperated: &'a String) -> Vec<Command> {
-    let mut substrings = Vec::<Command>::new();
+fn subdivide_commands<'a>(comma_seperated: &'a String) -> Vec<(String, Command)> {
+    let mut substrings = Vec::new();
 
     let mut begin = 0;
 
-    for i in 0..comma_seperated.len() {
-        if comma_seperated[i..i+1] == *"," {
-            let string = filter_spaces(&comma_seperated[begin..i]);
+    for i in 0..comma_seperated.len() + 1 {
+        let end_of_line =
+            i == comma_seperated.len() ||
+            comma_seperated[i..i+1] == *"#";
+
+        if end_of_line || comma_seperated[i..i+1] == *"," {
+            let command_string = filter_spaces(&comma_seperated[begin..i]);
+            let command = Command::from(&command_string);
 
             substrings.push(
-                Command::from(&string)
+                (command_string, command)
             );
 
             begin = i + 1;
         }
+        if end_of_line {
+            break;
+        }
     }
 
-    let i = comma_seperated.len();
-    let string = filter_spaces(&comma_seperated[begin..i]);
+    // let i = comma_seperated.len();
+    // let string = filter_spaces(&comma_seperated[begin..i]);
 
-    substrings.push(
-        Command::from(&string)
-    );
+    // substrings.push(
+    //     Command::from(&string)
+    // );
 
     substrings
 }
