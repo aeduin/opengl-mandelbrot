@@ -9,6 +9,8 @@ uniform dvec2 center;
 uniform double scale;
 uniform float max_mandel_number;
 const double max_distance_squared = 4.0;
+uniform int color_function_id;
+uniform float time;
 
 vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -67,11 +69,67 @@ void main()
         a = tempA;
     }
 
-    float fraction = log(counter / 4000.0 * 32.0) / 24.0;
+    if(color_function_id == 0) {
+        float fraction = log(counter / 4000.0 * 32.0) / 24.0;
 
-    float r = mapper(fraction * 7.0);
-    float g = mapper(fraction * 11.0);
-    float blue = mapper(fraction * 13.0);
+        float r = mapper(fraction * 7.0);
+        float g = mapper(fraction * 11.0);
+        float blue = mapper(fraction * 13.0);
 
-    Color = vec4(r * sqrt(g) * sqrt(blue), g * g, blue, 1.0);
+        Color = vec4(r * sqrt(g) * sqrt(blue), g * g, blue, 1.0);
+    }
+    else if(color_function_id == 1) {
+        float fraction = log(counter / 4000.0 * 32.0) / 24.0;
+
+        float r = mapper(fraction * 7.0);
+        float g = mapper(fraction * 11.0);
+        float blue = mapper(fraction * 13.0);
+
+        Color = vec4(r * g * blue, g, blue, 1.0);
+    }
+    else if(color_function_id == 2) {
+        float fraction = log(counter / 4000.0 * 32.0) / 24.0;
+
+        float r = mapper(mod(fraction * 7.0, .5));
+        float g = mapper(mod(fraction * 11.0, .5));
+        float blue = mapper(mod(fraction * 13.0, .5));
+
+        Color = vec4(r * g * blue, g, blue, 1.0);
+    }
+    else if(color_function_id == 3) {
+        float fraction = log(counter / 4000.0 * 32.0) / 24.0;
+
+        float r = mapper(fraction * 3.0);
+        float g = mapper(fraction * 11.0);
+        float blue = mapper(fraction * 31.0);
+
+        Color = vec4(r * sqrt(g) * sqrt(blue), g * b, blue, 1.0);
+    }
+    else if(color_function_id == 4) {
+        float fraction = log(counter / 4000.0 * 32.0) / 24.0 + time * 0.018;
+
+        float r = mapper(fraction * 3.0);
+        float g = mapper(fraction * 11.0);
+        float blue = mapper(fraction * 31.0);
+
+        Color = vec4(r * sqrt(g) * sqrt(blue), g * b, blue, 1.0);
+    }
+    else if(color_function_id == 5) {
+        float fraction = log(counter / 4000.0 * 32.0) / 24.0 + time * 0.02;
+
+        float r = mapper(fraction * 7.0);
+        float g = mapper(fraction * 11.0);
+        float blue = mapper(fraction * 13.0);
+
+        Color = vec4(r * sqrt(g) * sqrt(blue), g * g, blue, 1.0);
+    }
+    else if(color_function_id == 6) {
+        float fraction = log(counter / 4000.0 * 32.0) / 24.0 + time * 0.02;
+
+        float r = pow(mapper(fraction * 7.0), 1.0 + time *0.1);
+        float g = pow(mapper(fraction * 11.0), 1.0 + time *0.15);
+        float blue = pow(mapper(fraction * 13.0), 1.0 + time *0.2);
+
+        Color = vec4(r * sqrt(g) * sqrt(blue), g * g, blue, 1.0);
+    }
 }

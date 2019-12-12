@@ -10,6 +10,7 @@ use std::io;
 use std::io::prelude::*;
 use std::sync::mpsc::channel;
 use std::thread;
+use std::fs;
 
 fn main() {
     //open window and initialise
@@ -64,7 +65,11 @@ fn main() {
         (glium::index::IndexBuffer::new(&display, glium::index::PrimitiveType::TrianglesList, &indices).unwrap(), glium::vertex::VertexBuffer::new(&display, &vertices).unwrap())
     };
     
-    let program = glium::Program::from_source(&display, include_str!("triangle.vert"), include_str!("triangle.frag"), None).unwrap();
+    // let program = glium::Program::from_source(&display, include_str!("triangle.vert"), include_str!("triangle.frag"), None).unwrap();
+    let mut program = match program_from_shaders(&display) {
+        Some(value) => value,
+        None => panic!("can't construct shader"),
+    };
 
     //initialize variables for main loop
     let mut scale: f64 = 2.0;
@@ -82,6 +87,10 @@ fn main() {
     let mut draw_start;
 
     let mut zoom_scale = 0.0002;
+    let mut color_function_id: i32 = 0;
+    let continuous_color_functions = [4, 5, 6];
+
+    let program_start = std::time::SystemTime::now();
 
     //start main loop
     while open {
@@ -106,6 +115,11 @@ fn main() {
             let (width, height) = target.get_dimensions();
             let aspect_ratio = height as f32 / width as f32;
 
+            let elapsed_since_start = program_start.elapsed().unwrap();
+            let seconds_since_start = elapsed_since_start.as_secs() as f32 + elapsed_since_start.subsec_millis() as f32 / 1000.0;
+            // let seconds_since_start = seconds_since_start as f32 / 1000.0;
+            // println!("seconds since start = {}", seconds_since_start);
+            
             let draw_parameters = &glium::DrawParameters {
                 depth: glium::Depth {
                     test: glium::draw_parameters::DepthTest::IfLess,
@@ -121,6 +135,8 @@ fn main() {
                 max_mandel_number: max_mandel_number,
                 x_scale: if aspect_ratio > 1.0 {aspect_ratio} else {1.0},
                 y_scale: if aspect_ratio < 1.0 {1.0 / aspect_ratio} else {1.0},
+                color_function_id: color_function_id,
+                time: seconds_since_start,
             }, &draw_parameters).unwrap();
             
             target.finish().unwrap();
@@ -128,8 +144,9 @@ fn main() {
             //print draw time
             // let elapsed = draw_start.elapsed().unwrap();
             // println!("drawing took {}ms", elapsed.as_secs() * 1000 + elapsed.subsec_millis() as u64);
-
-            need_draw_update = false;
+            if !continuous_color_functions.contains(&color_function_id) {
+                need_draw_update = false;
+            }
         }
         
         // Read stdin
@@ -205,6 +222,17 @@ fn main() {
                                     Ok(parsed_value) => zoom_scale = parsed_value,
                                 }
                             }
+                            else if variable_name == "c" {
+                                match value.parse::<i32>() {
+                                    Err(_error) => println!("invalid integer number format: {}", value),
+                                    Ok(parsed_value) => {
+                                        color_function_id = parsed_value;
+                                        if continuous_color_functions.contains(&color_function_id) {
+                                            need_draw_update = true;
+                                        }
+                                    },
+                                }
+                            }
                             else {
                                 println!("unknown variable name: {}", variable_name);
                             }
@@ -219,7 +247,13 @@ fn main() {
                             }
                         }
                         Command::Export => 
-                            println!("x={},y={},s={},i={}", center[0], center[1], scale, max_mandel_number),
+                            println!("x={},y={},s={},i={},c={}", center[0], center[1], scale, max_mandel_number, color_function_id),
+                        Command::ReloadShader => {
+                            match program_from_shaders(&display) {
+                                Some(value) => program = value,
+                                None => (),
+                            }
+                        }
                         
                     }
                 }
@@ -295,6 +329,27 @@ fn main() {
     }
 }
 
+fn program_from_shaders(display: &glium::Display) -> Option<glium::Program> {
+    let vertex_file = match fs::read_to_string("src/triangle.vert") {
+        Ok(contents) => contents,
+        Err(error) => {
+            println!("Error reading vertex shader triangle.vert. Error message: {}", error);
+            return None;
+        }
+    };
+    let fragment_file = match fs::read_to_string("src/triangle.frag") {
+        Ok(contents) => contents,
+        Err(error) => {
+            println!("Error reading fragment shader triangle.frag. Error message: {}", error);
+            return None;
+        }
+    };;
+
+    let program = glium::Program::from_source(display, &vertex_file[..], &fragment_file[..], None).unwrap();
+
+    Some(program)
+}
+
 enum Action {
     Multiply,
     Divide,
@@ -322,6 +377,7 @@ enum Command {
     Set{variable_name: String, value: String},
     Export,
     ToggleZoom,
+    ReloadShader,
     Invalid,
 }
 
@@ -356,6 +412,9 @@ impl<'a> From<&'a String> for Command {
         }
         else if input == "zoom" {
             Command::ToggleZoom
+        }
+        else if input == "reloadshader" {
+            Command::ReloadShader
         }
         else{
             Command::Invalid
