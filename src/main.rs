@@ -68,8 +68,12 @@ fn main() {
     // let program = glium::Program::from_source(&display, include_str!("triangle.vert"), include_str!("triangle.frag"), None).unwrap();
     let mut program = match program_from_shaders(&display) {
         Some(value) => value,
-        None => panic!("can't construct shader"),
+        None => panic!("can't construct shaders"),
     };
+    // let mut compute_program = match compute_program_from_shaders(&display) {
+    //     Some(value) => value,
+    //     None => panic!("can't construct compute shader")
+    // };
 
     //initialize variables for main loop
     let mut scale: f64 = 2.0;
@@ -91,6 +95,9 @@ fn main() {
     let continuous_color_functions = [4, 5, 6];
 
     let program_start = std::time::SystemTime::now();
+
+    let image = glium::texture::integral_texture2d::IntegralTexture2d::empty(&display, 1000, 1000).unwrap();
+    let texture = image; //image.sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Nearest);
 
     //start main loop
     while open {
@@ -137,6 +144,7 @@ fn main() {
                 y_scale: if aspect_ratio < 1.0 {1.0 / aspect_ratio} else {1.0},
                 color_function_id: color_function_id,
                 time: seconds_since_start,
+                // image: texture,
             }, &draw_parameters).unwrap();
             
             target.finish().unwrap();
@@ -329,6 +337,20 @@ fn main() {
     }
 }
 
+fn compute_program_from_shaders(display: &glium::Display) -> Option<glium::program::ComputeShader> {
+    let shader_file = match fs::read_to_string("src/mandel.comp") {
+        Ok(contents) => contents,
+        Err(error) => {
+            println!("Error reading compute shader mandel.comp. Error message: {}", error);
+            return None;
+        }
+    };
+
+    Some(
+        glium::program::ComputeShader::from_source(display, &shader_file).unwrap()
+    )
+}
+
 fn program_from_shaders(display: &glium::Display) -> Option<glium::Program> {
     let vertex_file = match fs::read_to_string("src/triangle.vert") {
         Ok(contents) => contents,
@@ -343,7 +365,7 @@ fn program_from_shaders(display: &glium::Display) -> Option<glium::Program> {
             println!("Error reading fragment shader triangle.frag. Error message: {}", error);
             return None;
         }
-    };;
+    };
 
     let program = glium::Program::from_source(display, &vertex_file[..], &fragment_file[..], None).unwrap();
 

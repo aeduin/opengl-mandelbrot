@@ -1,0 +1,54 @@
+#version 430
+uniform int old_buffer_width;
+uniform int old_buffer_height;
+uniform int new_buffer_width;
+uniform int new_buffer_height;
+
+uniform dvec2 old_center;
+uniform double old_scale;
+uniform dvec2 new_center;
+uniform double new_scale;
+
+uniform bool force_update;
+
+// this used to be a float, don't forget!
+uniform int max_mandel_number;
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(r32i) uniform iimage2D input_image;
+layout(r32i) uniform iimage2D output_image;
+
+const double max_distance_squared = 4.0;
+
+int calc_pixel(double x, double y) {
+    double a = 0.0;
+    double b = 0.0;
+    int counter = 0;
+
+    while(a * a + b * b < max_distance_squared){
+        if(++counter >= max_mandel_number) {
+            return -1;
+        }
+        
+        double tempA = a * a - b * b + x;
+        b = 2.0 * a * b + y; 
+        a = tempA;
+    }
+
+    return counter;
+}
+
+void main() {
+    int idx = int(gl_GlobalInvocationID.x);
+    int idy = int(gl_GlobalInvocationID.y);
+
+    float id_max = float(max(idx, idy));
+
+    double mandel_x = float(idx * 2 - old_buffer_width) / id_max * new_scale;
+    double mandel_y = float(idy * 2 - old_buffer_height) / id_max;
+
+    int mandel_number = calc_pixel(mandel_x, mandel_y);
+    imageStore(output_image, ivec2(idx, idy), ivec4(mandel_number, mandel_number, mandel_number, mandel_number));
+}
+
