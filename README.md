@@ -39,3 +39,6 @@ The operators are:
   * `-=`
 
 Values are numbers.
+
+# Performance
+On my RTX 2070, this implementation is able to reach 60fps when zooming at most parts of the images, with max iterations set to 1000.
